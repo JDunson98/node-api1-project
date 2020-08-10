@@ -1,17 +1,16 @@
-// pulling the dependencies
 const express = require("express")
-const db = require("./database.js")
-const database = require("./database.js")
-
-// creating a new server
 const server = express()
+const db = require("./database")
 
+server.use(express.json())
+
+//Getting Home Info
 server.get("/", (req, res) => {
-    res.json({ message: "Hello, World" })
+	res.json({ message: "Hello, World" })
 })
 
-// getting users from the database
-server.get("/users", (req, res) => {
+//Getting List of Users
+server.get("/api/users", (req, res) => {
     const users = db.getUsers()
 
     if (users) {
@@ -21,34 +20,31 @@ server.get("/users", (req, res) => {
     }
 })
 
-// getting a specific user
-server.get("/users/:id", (req, res) => {
-    const id = req.params.id
-    const user = db.getUserById(id)
+//Getting Users by ID
+server.get("/api/users/:id", (req, res) => {
+	const id = req.params.id
+	const user = db.getUserById(id)
 
-// error if the user ID is not found
-    if (user) {
-        res.json(user)
-    } else if (!user) {
+	if (user) {
+		res.json(user)
+	} else if (!user) {
         res.status(500).json({ message: "User not found." })
     } else {
-        res.status(404).json({ message: "The user with the specified ID does not exist." })
-    }
+		res.status(404).json({ message: "The user with the specified ID does not exist." })
+	}
 })
 
-server.post("/users", (req, res) => {
-    const newUser = db.newUser({
+//Adding New User
+server.post("/api/users", (req, res) => {
+    const addUser = db.createUser({
         name: req.body.name
     })
+    if (!req.body.name || !req.body.bio) { 
+        res.status(400).json({message: "Please provide name and bio for the user."})
+    } else
 
-// error if the request is missing the name or bio, if correct then status returns 201
-    if(!req.body.name || !req.body.bio) {
-        res.status(400).json({ message: "Please provide a name and bio for the user." })
-    } else {
-        res.status(201).json(newUser)
-    }
+    res.status(201).json(addUser)
 
-// error if there is already an existing user 
     if(!db.users.find(obj => obj.user === newUser)) {
         res.status(201).json(newUser);
     } else {
@@ -56,32 +52,38 @@ server.post("/users", (req, res) => {
     }
 })
 
-server.delete("/users/:id", (req, res) => {
-    const user = db.getUserById(req.params.id)
 
-// error if the user ID is not found
-    if (user) {
-        db.deleteUser(req.params.id)
-        res.status(204).end()
-    } else {
-        res.status(404).json({ message: "The user with the specified ID does not exist." })
-    }
-})
-
-server.put("/users/:id", (req, res) => {
+//Updating Existing User
+server.put("/api/users/:id", (req, res) => { 
     const id = req.params.id
-    const updateUser = db.updateUser(id)
+    const data = req.body
+    const updateUser = db.updateUser(id, data)
 
-//error if ID, name, or bio is not found
     if (!updateUser) {
-        res.status(404).json({ message: "The user with the specified ID does not exist." })
-    } else if (!database.name || !database.bio) {
-        res.status(400).json({ errorMessage: "Please provide name and bio for the user."})
+        res.status(404).json({message: "The user with the specified ID does not exist." })
+    } else if (!data.name || !data.bio) {
+        res.status(400).json({errorMessage: "Please proivde name and bio for the user"})
     } else {
         res.status(200).json(updateUser)
     }
 })
 
+//Deleting Existing User
+server.delete("/api/users/:id", (req, res) => {
+    const id = req.params.id
+    const user = db.getUserById(id)
+
+
+    if (user) {
+        db.deleteUser(id)
+        res.status(204).end()
+    } else { 
+        res.status(404).json({ message: "The user with the specified ID does not exist." })
+    }
+
+})
+
+
 server.listen(8080, () => {
-    console.log("Server started on port 8080")
+    console.log("Server on port 8080")
 })
